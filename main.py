@@ -1,9 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 def plot_daily_close(ticker_name: str) -> None:
+
+    file_path = "data" + os.path.sep + ticker_name
     # Reads Data and selects Date, Open, High, Low, Close and Volume columns for the Pandas dataframe
-    dataset = pd.read_csv('data\\' + ticker_name + ".csv", usecols = [0,1,2,3,4,6])
+    dataset = pd.read_csv(file_path + ".csv", usecols = [0,1,2,3,4,6])
 
     # Plots the Daily Prices of Selected Ticker
     plt.plot(dataset[['Close']], 'g', label = 'Closing price')
