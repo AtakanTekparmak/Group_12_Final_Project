@@ -22,10 +22,21 @@ def remove_null_values(data_path: str = "data"):
     files = [f for f in listdir(data_path) if isfile(join(data_path, f))]
 
     for file in files:
+
+        # Remove Non Null
         file_path = data_path + os.path.sep + file
         dataset = pd.read_csv(file_path)
         dataset = dataset.dropna()
         dataset.to_csv(file_path)
+        
+        # Fix the Error in Column Names
+        with open(file_path) as f:
+            lines = f.readlines()
+
+            lines[0] = "Date,Open,High,Low,Close,Adj Close,Volume\n"
+
+            with open(file_path, "w") as f:
+                f.writelines(lines)
 
 
 if __name__ == '__main__':
