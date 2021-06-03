@@ -17,15 +17,28 @@ def plot_daily_close(ticker_name: str) -> None:
     plt.legend(loc = 'upper left')
     plt.show()
 
+def change_first_line(file_path: str):
+    with open(file_path) as f:
+        lines = f.readlines()
+
+        lines[0] = "Date,Open,High,Low,Close,Adj Close,Volume\n"
+
+        with open(file_path, "w") as f:
+            f.writelines(lines)
+
 # Removes the null values in the datasets
 def remove_null_values(data_path: str = "data"):
     files = [f for f in listdir(data_path) if isfile(join(data_path, f))]
 
     for file in files:
         file_path = data_path + os.path.sep + file
+        change_first_line(file_path)
+
+        '''
         dataset = pd.read_csv(file_path)
         dataset = dataset.dropna()
         dataset.to_csv(file_path)
+        '''
 
 
 if __name__ == '__main__':
