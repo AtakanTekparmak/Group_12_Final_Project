@@ -80,11 +80,11 @@ def standardize_data(train, test, train_size, test_size):
 
 	scaler = MinMaxScaler()
 
-	train = np.reshape(train.values, (train_size,1)) 
+	train = np.reshape(train.values, (train_size, 1)) 
 	train = scaler.fit_transform(train)
 	print(train)
 
-	test = np.reshape(test.values, (test_size,1)) 
+	test = np.reshape(test.values, (test_size, 1)) 
 	test = scaler.fit_transform(test)
 	print(test)
 
