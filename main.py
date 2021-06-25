@@ -127,9 +127,6 @@ def initialize_model(scaler, X_train, X_test, y_train, y_test):
     y_train = scaler.inverse_transform(y_train)
     y_test = scaler.inverse_transform(y_test)
 
-    #trainScore = math.sqrt(mean_squared_error(y_train[0], predict_train[:,0]))
-    #print('Train: %.2f' % (trainScore))
-
     plt.plot(y_train, color = 'black', label = 'Real Stock Price')
     plt.plot(predict_train, color = 'green', label = 'Predicted Stock Price')
     plt.title('Stock Price Prediction')
