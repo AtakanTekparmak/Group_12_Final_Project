@@ -6,7 +6,12 @@ from os import listdir
 from os.path import isfile, join
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import Dropout
+import math
+from sklearn.metrics import mean_squared_error
 
 # Reads data from input generated csv file
 def read_csv_file(ticker_name: str) -> None:
@@ -66,18 +71,6 @@ def split_data(dataset):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle = False)
 
-
-    print(train)
-    print("X_train")
-    print(X_train)
-    print("X_test")
-    print(X_test)
-    print("y_train")
-    print(y_train)
-    print("y_test")
-    print(y_test)
-
-
     return X_train, X_test, y_train, y_test
 
 
@@ -95,11 +88,6 @@ def standardize_data(X_train, X_test, y_train, y_test):
     X_test = np.reshape(X_test.values, (X_test_size, 1)) 
     X_test = scaler.fit_transform(X_test)
 
-    print("Standardized X Train")
-    print(X_train)
-    print("Standardized X Test")
-    print(X_test)
-
     y_train_size = len(y_train)
     y_test_size = len(y_test)
 
@@ -109,19 +97,54 @@ def standardize_data(X_train, X_test, y_train, y_test):
     y_test = np.reshape(y_test.values, (y_test_size, 1)) 
     y_test = scaler.fit_transform(y_test)
 
-    print("Standardized y Train")
-    print(y_train)
-    print("Standardized y Test")
-    print(y_test)
+    return scaler, X_train, X_test, y_train, y_test
 
-    return X_train, X_test, y_train, y_test
+
+def initialize_model(scaler, X_train, X_test, y_train, y_test):
+    steps = 2
+    feature_number = 1
+    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+    model = Sequential()
+    model.add(LSTM(32, activation = 'relu', return_sequences = True, input_shape = (X_train.shape[1], 1)))
+    model.add(Dropout(0.2))
+
+    model.add(LSTM(16, activation = 'relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(1))
+    model.compile(optimizer = 'adam', loss = 'mse')
+
+    model.fit(X_train, y_train, batch_size = 10, epochs = 20, verbose = 1)
+
+    predict_train = model.predict(X_train)
+    predict_train = scaler.inverse_transform(predict_train)
+    
+    predict_test = model.predict(X_test)
+    predict_test = scaler.inverse_transform(predict_test)
+
+    y_train = scaler.inverse_transform(y_train)
+    y_test = scaler.inverse_transform(y_test)
+
+    #trainScore = math.sqrt(mean_squared_error(y_train[0], predict_train[:,0]))
+    #print('Train: %.2f' % (trainScore))
+
+    plt.plot(y_train, color = 'black', label = 'Real Stock Price')
+    plt.plot(predict_train, color = 'green', label = 'Predicted Stock Price')
+    plt.title('Stock Price Prediction')
+    plt.xlabel('Time')
+    plt.ylabel('Stock Price')
+    plt.legend()
+    plt.show()
 
 # Processes a given ticker 
 def process_ticker(ticker_name):
     dataset = read_csv_file(ticker_name)
     plot_daily_close(dataset)
     X_train, X_test, y_train, y_test = split_data(dataset)
-    X_train, X_test, y_train, y_test = standardize_data(X_train, X_test, y_train, y_test)
+    scaler, X_train, X_test, y_train, y_test = standardize_data(X_train, X_test, y_train, y_test)
+    initialize_model(scaler, X_train, X_test, y_train, y_test)
 
 if __name__ == '__main__':
     #remove_null_values()
