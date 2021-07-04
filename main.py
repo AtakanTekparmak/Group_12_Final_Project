@@ -13,6 +13,23 @@ from keras.layers import Dropout
 import math
 from sklearn.metrics import mean_squared_error
 
+from numpy.random import seed
+
+# Global storage for losses
+loss_over_tickers = [] # Average loss for each ticker
+loss_over_time_tickers = [] # Losses for each epoch of each ticker
+
+# Global hyperparameters for easy experimentation
+# Changing the values of the dictionary changes the model archictecture/process
+hyperparameters = {
+    "LSTM_Unit_Number_1":  32, 
+    "LSTM_Unit_Number_2":  16,
+    "Dropout_Unit_Number": 0.2,
+    "Batch_Size":          5, 
+    "Epochs":              10, 
+}
+
+
 # Reads data from input generated csv file
 def read_csv_file(ticker_name: str) -> None:
 
@@ -24,7 +41,7 @@ def read_csv_file(ticker_name: str) -> None:
 
 
 # Plots the Daily Close Values of a Ticker
-def plot_daily_close(dataset):
+def plot_daily_close(dataset, ticker_name):
 
     # Plots the Daily Prices of Selected Ticker
     plt.plot(dataset[['Close']], 'g', label = 'Closing price')
@@ -100,23 +117,31 @@ def standardize_data(X_train, X_test, y_train, y_test):
     return scaler, X_train, X_test, y_train, y_test
 
 
-def initialize_model(scaler, X_train, X_test, y_train, y_test):
+def initialize_model():
+    model = Sequential()
+    model.add(LSTM(hyperparameters["LSTM_Unit_Number_1"], activation = 'relu', return_sequences = True, input_shape = (1, 1)))
+    model.add(Dropout(hyperparameters["Dropout_Unit_Number"]))
+
+    model.add(LSTM(hyperparameters["LSTM_Unit_Number_2"], activation = 'relu'))
+    model.add(Dropout(hyperparameters["Dropout_Unit_Number"]))
+
+    model.add(Dense(1))
+    model.compile(optimizer = 'adam', loss = 'mse')
+
+    return model
+
+
+def train_model(model, scaler, X_train, X_test, y_train, y_test):
     steps = 2
     feature_number = 1
     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
     X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-    model = Sequential()
-    model.add(LSTM(32, activation = 'relu', return_sequences = True, input_shape = (X_train.shape[1], 1)))
-    model.add(Dropout(0.2))
+    history = model.fit(X_train, y_train, batch_size = hyperparameters["Batch_Size"], epochs = hyperparameters["Epochs"], verbose = 0)
 
-    model.add(LSTM(16, activation = 'relu'))
-    model.add(Dropout(0.2))
-
-    model.add(Dense(1))
-    model.compile(optimizer = 'adam', loss = 'mse')
-
-    model.fit(X_train, y_train, batch_size = 10, epochs = 20, verbose = 1)
+    losses = history.history['loss']
+    loss_over_tickers.append(sum(losses) / len(losses))
+    loss_over_time_tickers.append(losses)
 
     predict_train = model.predict(X_train)
     predict_train = scaler.inverse_transform(predict_train)
@@ -125,25 +150,46 @@ def initialize_model(scaler, X_train, X_test, y_train, y_test):
     predict_test = scaler.inverse_transform(predict_test)
 
     y_train = scaler.inverse_transform(y_train)
-    y_test = scaler.inverse_transform(y_test)
 
-    plt.plot(y_train, color = 'black', label = 'Real Stock Price')
-    plt.plot(predict_train, color = 'green', label = 'Predicted Stock Price')
-    plt.title('Stock Price Prediction')
-    plt.xlabel('Time')
-    plt.ylabel('Stock Price')
+    #plt.plot(y_train, color = 'black', label = 'Real Stock Price')
+    #plt.plot(predict_train, color = 'green', label = 'Predicted Stock Price - Train')
+    #plt.plot([None for i in range(int(len(predict_train) * 8 / 10))] + [x for x in predict_test], color = 'orange', label = 'Predicted Stock Price - Test')
+
+    #plt.title('Stock Price Prediction')
+    #plt.xlabel('Time')
+    #plt.ylabel('Stock Price')
+    #plt.legend()
+    #plt.show()
+
+# Plots the loss over all tickers
+def plot_loss_tickers():
+    plt.plot(loss_over_tickers, color = 'red', label = 'Average Loss of Tickers')
+    plt.title('Loss Over All 501 Tickers')
+    plt.xlabel('Number of Tickers')
+    plt.ylabel('Loss')
     plt.legend()
     plt.show()
 
 # Processes a given ticker 
-def process_ticker(ticker_name):
+def process_ticker(ticker_name, model):
     dataset = read_csv_file(ticker_name)
-    plot_daily_close(dataset)
+    #plot_daily_close(dataset, ticker_name)
     X_train, X_test, y_train, y_test = split_data(dataset)
     scaler, X_train, X_test, y_train, y_test = standardize_data(X_train, X_test, y_train, y_test)
-    initialize_model(scaler, X_train, X_test, y_train, y_test)
+    train_model(model, scaler, X_train, X_test, y_train, y_test)
 
 if __name__ == '__main__':
     #remove_null_values()
-    ticker_name = input("Ticker name: ")
-    process_ticker(ticker_name)
+    seed(1)
+    model = initialize_model()
+    files = [f for f in listdir("data") if isfile(join("data", f))]
+
+    i = 0 
+    for file_name in files:
+      process_ticker(file_name.rstrip(".csv"), model)
+      if i % 10 == 0:
+        print(str(i) + " out of " + str(len(files)))
+      i = i + 1
+
+    plot_loss_tickers()
+    print(sum(loss_over_tickers)/len(loss_over_tickers))
