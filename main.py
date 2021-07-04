@@ -19,14 +19,15 @@ from numpy.random import seed
 loss_over_tickers = [] # Average loss for each ticker
 loss_over_time_tickers = [] # Losses for each epoch of each ticker
 
+
 # Global hyperparameters for easy experimentation
 # Changing the values of the dictionary changes the model archictecture/process
 hyperparameters = {
-    "LSTM_Unit_Number_1":  32, 
-    "LSTM_Unit_Number_2":  16,
+    "LSTM_Unit_Number_1":  64, 
+    "LSTM_Unit_Number_2":  32,
     "Dropout_Unit_Number": 0.2,
-    "Batch_Size":          5, 
-    "Epochs":              10, 
+    "Batch_Size":          10, 
+    "Epochs":              20, 
 }
 
 
@@ -117,7 +118,9 @@ def standardize_data(X_train, X_test, y_train, y_test):
     return scaler, X_train, X_test, y_train, y_test
 
 
+# Initializes LSTM model
 def initialize_model():
+
     model = Sequential()
     model.add(LSTM(hyperparameters["LSTM_Unit_Number_1"], activation = 'relu', return_sequences = True, input_shape = (1, 1)))
     model.add(Dropout(hyperparameters["Dropout_Unit_Number"]))
@@ -131,7 +134,9 @@ def initialize_model():
     return model
 
 
+# Trains the model and predicts future values
 def train_model(model, scaler, X_train, X_test, y_train, y_test):
+
     steps = 2
     feature_number = 1
     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
@@ -151,6 +156,9 @@ def train_model(model, scaler, X_train, X_test, y_train, y_test):
 
     y_train = scaler.inverse_transform(y_train)
 
+
+    # Optional plot to compare training and testing values to the actual stock values
+
     #plt.plot(y_train, color = 'black', label = 'Real Stock Price')
     #plt.plot(predict_train, color = 'green', label = 'Predicted Stock Price - Train')
     #plt.plot([None for i in range(int(len(predict_train) * 8 / 10))] + [x for x in predict_test], color = 'orange', label = 'Predicted Stock Price - Test')
@@ -161,8 +169,10 @@ def train_model(model, scaler, X_train, X_test, y_train, y_test):
     #plt.legend()
     #plt.show()
 
+
 # Plots the loss over all tickers
 def plot_loss_tickers():
+
     plt.plot(loss_over_tickers, color = 'red', label = 'Average Loss of Tickers')
     plt.title('Loss Over All 501 Tickers')
     plt.xlabel('Number of Tickers')
@@ -170,26 +180,38 @@ def plot_loss_tickers():
     plt.legend()
     plt.show()
 
+
 # Processes a given ticker 
 def process_ticker(ticker_name, model):
+
     dataset = read_csv_file(ticker_name)
     #plot_daily_close(dataset, ticker_name)
     X_train, X_test, y_train, y_test = split_data(dataset)
     scaler, X_train, X_test, y_train, y_test = standardize_data(X_train, X_test, y_train, y_test)
     train_model(model, scaler, X_train, X_test, y_train, y_test)
 
+
+# Created by: Lauren Kersten (s3950905), Atakan Tekparmak (s4017765), Fransiskus Adrian Gunawan (s4024028), and Melisa Samancioglu (s4010418)
+
+
 if __name__ == '__main__':
+
     #remove_null_values()
     seed(1)
+
     model = initialize_model()
     files = [f for f in listdir("data") if isfile(join("data", f))]
 
     i = 0 
+
+    # Loops through all of the .csv files
     for file_name in files:
       process_ticker(file_name.rstrip(".csv"), model)
       if i % 10 == 0:
-        print(str(i) + " out of " + str(len(files)))
+        print(str(i) + " out of " + str(len(files)))    # Prints progress of program
       i = i + 1
 
     plot_loss_tickers()
+
+    print("Average loss = ")
     print(sum(loss_over_tickers)/len(loss_over_tickers))

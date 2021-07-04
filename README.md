@@ -22,3 +22,5 @@ python main.py
 
 python3 main.py
 ```
+
+Note: The program may take multiple hours to complete.
